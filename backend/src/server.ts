@@ -1,6 +1,8 @@
 import { app } from './app.js';
+import{connectDB} from './config/database';
 import { env } from './config/env.js';
 
+await connectDB();
 const server = app.listen(env.port, () => {
   console.log(`Shine Notes API running at http://localhost:${env.port}`);
 });
