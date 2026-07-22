@@ -13,8 +13,8 @@ app.use(
     origin: env.clientUrl,
   }),
 );
-app.use(express.json());
 app.use(pinoHttpModule.pinoHttp());
+app.use(express.json());
 
 app.get('/health', (_req, res) => {
   res.status(200).json({
