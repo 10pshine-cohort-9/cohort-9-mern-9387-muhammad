@@ -13,7 +13,7 @@ export interface IUser extends Document {
 const userSchema = new Schema<IUser>(
   {
     name: {
-      tpe: String,
+      type: String,
       required: [true, 'Name is required'],
       trim: true,
     },
@@ -27,7 +27,7 @@ const userSchema = new Schema<IUser>(
     password: {
       type: String,
       required: [true, 'Password is required'],
-      minlenght: [6, 'Password must be at least 6 characters'],
+      minlength: [6, 'Password must be at least 6 characters'],
     },
   },
   {
