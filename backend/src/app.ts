@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import * as pinoHttpModule from 'pino-http';
 
 import { env } from './config/env.js';
-
+import { authRouter } from './routes/authRoutes.js';
 export const app = express();
 
 app.use(helmet());
@@ -15,6 +15,7 @@ app.use(
 );
 app.use(pinoHttpModule.pinoHttp());
 app.use(express.json());
+app.use('/api/auth', authRouter);
 
 app.get('/health', (_req, res) => {
   res.status(200).json({
