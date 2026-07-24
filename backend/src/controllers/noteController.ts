@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import mongoose from 'mongoose';
 import { Note } from '../models/Note.js';
 import { AuthRequest } from '../middleware/authMiddleware.js';
 
@@ -17,9 +18,8 @@ export const getNotes = async (
     });
     res.status(200).json({ success: true, count: notes.length, data: notes });
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: 'Failed to fetch notes', error });
+    console.error('Get notes error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch notes' });
   }
 };
 
@@ -50,9 +50,14 @@ export const getNoteById = async (
 
     res.status(200).json({ success: true, data: note });
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: 'Failed to fetch note', error });
+    if (error instanceof mongoose.Error.CastError) {
+      res
+        .status(400)
+        .json({ success: false, message: 'Invalid note ID format' });
+      return;
+    }
+    console.error('Get note error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch note' });
   }
 };
 
@@ -68,16 +73,22 @@ export const createNote = async (
 
     const { title, content } = req.body;
 
-    if (!title || !content) {
-      res
-        .status(400)
-        .json({ success: false, message: 'Please provide title and content' });
+    if (
+      typeof title !== 'string' ||
+      typeof content !== 'string' ||
+      !title.trim() ||
+      !content.trim()
+    ) {
+      res.status(400).json({
+        success: false,
+        message: 'Please provide valid title and content strings',
+      });
       return;
     }
 
     const note = await Note.create({
-      title,
-      content,
+      title: title.trim(),
+      content: content.trim(),
       user: req.user._id,
     });
 
@@ -87,9 +98,8 @@ export const createNote = async (
       data: note,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: 'Failed to create note', error });
+    console.error('Create note error:', error);
+    res.status(500).json({ success: false, message: 'Failed to create note' });
   }
 };
 
@@ -112,14 +122,16 @@ export const updateNote = async (
     }
 
     if (note.user.toString() !== req.user._id.toString()) {
-      res
-        .status(403)
-        .json({ success: false, message: 'Not authorized to edit this note' });
+      res.status(403).json({
+        success: false,
+        message: 'Not authorized to edit this note',
+      });
       return;
     }
 
-    if (title) note.title = title;
-    if (content) note.content = content;
+    if (typeof title === 'string' && title.trim()) note.title = title.trim();
+    if (typeof content === 'string' && content.trim())
+      note.content = content.trim();
 
     const updatedNote = await note.save();
 
@@ -129,9 +141,14 @@ export const updateNote = async (
       data: updatedNote,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: 'Failed to update note', error });
+    if (error instanceof mongoose.Error.CastError) {
+      res
+        .status(400)
+        .json({ success: false, message: 'Invalid note ID format' });
+      return;
+    }
+    console.error('Update note error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update note' });
   }
 };
 
@@ -144,7 +161,6 @@ export const deleteNote = async (
       res.status(401).json({ success: false, message: 'Not authorized' });
       return;
     }
-
     const note = await Note.findById(req.params.id);
 
     if (!note) {
@@ -159,7 +175,6 @@ export const deleteNote = async (
       });
       return;
     }
-
     await note.deleteOne();
 
     res.status(200).json({
@@ -167,8 +182,13 @@ export const deleteNote = async (
       message: 'Note deleted successfully',
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: 'Failed to delete note', error });
+    if (error instanceof mongoose.Error.CastError) {
+      res
+        .status(400)
+        .json({ success: false, message: 'Invalid note ID format' });
+      return;
+    }
+    console.error('Delete note error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete note' });
   }
 };
