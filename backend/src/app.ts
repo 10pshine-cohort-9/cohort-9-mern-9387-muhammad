@@ -10,16 +10,25 @@ import { noteRouter } from './routes/noteRoutes.js';
 export const app = express();
 
 app.use(helmet());
+
 app.use(
   cors({
     origin: env.clientUrl,
   }),
 );
-app.use(pinoHttpModule.pinoHttp());
+
+// Replace the old pinoHttp() call with this
+app.use(
+  pinoHttpModule.pinoHttp({
+    redact: ['req.headers.authorization'],
+  }),
+);
+
 app.use(express.json());
 
 app.use('/api/auth', authRouter);
 app.use('/api/notes', noteRouter);
+
 app.get('/health', (_req, res) => {
   res.status(200).json({
     success: true,

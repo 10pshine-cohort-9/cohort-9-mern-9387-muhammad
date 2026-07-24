@@ -7,10 +7,6 @@ export interface AuthRequest extends Request {
   user?: IUser;
 }
 
-interface JwtPayload {
-  id: string;
-}
-
 export const protect = async (
   req: AuthRequest,
   res: Response,
@@ -26,15 +22,23 @@ export const protect = async (
       token = req.headers.authorization.split(' ')[1];
 
       if (!token) {
-        res.status(401).json({
-          success: false,
-          message: 'Not authorized, no token provided',
-        });
+        res
+          .status(401)
+          .json({
+            success: false,
+            message: 'Not authorized, no token provided',
+          });
         return;
       }
 
-      // Double-cast for jwt.verify return type
-      const decoded = jwt.verify(token, env.jwtSecret) as unknown as JwtPayload;
+      // Verify and validate token
+      const decoded = jwt.verify(token, env.jwtSecret);
+      if (typeof decoded === 'string' || typeof decoded.id !== 'string') {
+        res
+          .status(401)
+          .json({ success: false, message: 'Not authorized, invalid token' });
+        return;
+      }
 
       const user = await User.findById(decoded.id).select('-password');
       if (!user) {
@@ -46,11 +50,10 @@ export const protect = async (
       next();
       return;
     } catch (error) {
-      res.status(401).json({
-        success: false,
-        message: 'Not authorized, token failed',
-        error,
-      });
+      console.error('Auth middleware error:', error);
+      res
+        .status(401)
+        .json({ success: false, message: 'Not authorized, token failed' });
       return;
     }
   }
