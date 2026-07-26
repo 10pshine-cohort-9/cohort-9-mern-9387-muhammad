@@ -1,27 +1,32 @@
-const API_BASE_URL = 'http://localhost:4000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
-export const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
-  const token = localStorage.getItem('token');
+export const fetchAPI = async <T = any>(
+    endpoint: string,
+    options: RequestInit = {},
+): Promise<T> => {
+    const token = localStorage.getItem('token');
 
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {}),
-  };
+    const headers = new Headers(options.headers || {});
+    headers.set('Content-Type', 'application/json');
 
-  if (token) {
-    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
-  }
+    if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+    }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+    try {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            ...options,
+            headers,
+        });
 
-  const data = await response.json();
+        const data = await response.json();
 
-  if (!response.ok) {
-    throw new Error(data.message || 'Something went wrong');
-  }
+        if (!response.ok) {
+            throw new Error(data.message || 'Something went wrong');
+        }
 
-  return data;
+        return data as T;
+    } catch (error) {
+        throw error instanceof Error ? error : new Error('Network or API error');
+    }
 };
