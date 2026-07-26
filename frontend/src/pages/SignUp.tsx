@@ -49,32 +49,35 @@ export const SignUp: React.FC = () => {
 
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
-                        <label>Full Name</label>
+                        <label htmlFor="name">Full Name</label>
                         <input
+                            id="name"
                             type="text"
                             required
                             className="form-control"
-                            placeholder="John Doe"
+                            placeholder="Enter Your Name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                         />
                     </div>
 
                     <div className="form-group">
-                        <label>Email Address</label>
+                        <label htmlFor="email">Email Address</label>
                         <input
+                            id="email"
                             type="email"
                             required
                             className="form-control"
-                            placeholder="you@example.com"
+                            placeholder="Enter Your Email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                         />
                     </div>
 
                     <div className="form-group">
-                        <label>Password</label>
+                        <label htmlFor="password">Password</label>
                         <input
+                            id="password"
                             type="password"
                             required
                             className="form-control"
@@ -83,6 +86,7 @@ export const SignUp: React.FC = () => {
                             onChange={(e) => setPassword(e.target.value)}
                         />
                     </div>
+
 
                     <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', marginTop: '12px' }}>
                         {loading ? 'Creating account...' : 'Sign Up'}

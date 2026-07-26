@@ -48,24 +48,26 @@ export const Login: React.FC = () => {
 
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
-                        <label>Email Address</label>
+                        <label htmlFor="email">Email Address</label>
                         <input
+                            id="email"
                             type="email"
                             required
                             className="form-control"
-                            placeholder="you@example.com"
+                            placeholder="Enter Your Email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                         />
                     </div>
 
                     <div className="form-group">
-                        <label>Password</label>
+                        <label htmlFor="password">Password</label>
                         <input
+                            id="password"
                             type="password"
                             required
                             className="form-control"
-                            placeholder="••••••••"
+                            placeholder="Enter Your Password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                         />
