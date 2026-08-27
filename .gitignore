@@ -33,6 +33,7 @@ logs/
 reports/
 coverage/
 .nyc_output/
+.scannerwork/
 
 # IDE and System files
 .vscode/

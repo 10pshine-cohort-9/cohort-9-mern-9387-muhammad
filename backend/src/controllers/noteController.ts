@@ -81,7 +81,7 @@ export const createNote = async (
     ) {
       res.status(400).json({
         success: false,
-        message: 'Please provide valid title and content strings',
+        message: 'Title and content are required and must be non-empty strings',
       });
       return;
     }
@@ -114,6 +114,29 @@ export const updateNote = async (
     }
 
     const { title, content } = req.body;
+
+    if (
+      (title !== undefined && typeof title !== 'string') ||
+      (content !== undefined && typeof content !== 'string')
+    ) {
+      res.status(400).json({
+        success: false,
+        message: 'Title and content must be strings',
+      });
+      return;
+    }
+
+    const trimmedTitle = typeof title === 'string' ? title.trim() : undefined;
+    const trimmedContent = typeof content === 'string' ? content.trim() : undefined;
+
+    if (!trimmedTitle && !trimmedContent) {
+      res.status(400).json({
+        success: false,
+        message: 'At least one of title or content must be provided',
+      });
+      return;
+    }
+
     const note = await Note.findById(req.params.id);
 
     if (!note) {
@@ -129,9 +152,8 @@ export const updateNote = async (
       return;
     }
 
-    if (typeof title === 'string' && title.trim()) note.title = title.trim();
-    if (typeof content === 'string' && content.trim())
-      note.content = content.trim();
+    if (trimmedTitle) note.title = trimmedTitle;
+    if (trimmedContent) note.content = trimmedContent;
 
     const updatedNote = await note.save();
 

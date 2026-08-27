@@ -17,7 +17,6 @@ app.use(
   }),
 );
 
-// Replace the old pinoHttp() call with this
 app.use(
   pinoHttpModule.pinoHttp({
     redact: ['req.headers.authorization'],
