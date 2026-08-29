@@ -59,6 +59,11 @@ try {
   server = app.listen(env.port, () => {
     console.log(`Shine Notes API running at http://localhost:${env.port}`);
   });
+
+  server.on('error', (error: Error) => {
+    console.error('Server error:', error);
+    shutdown('SERVER_ERROR');
+  });
 } catch (error) {
   console.error('Server failed to start:', error);
   process.exit(1);

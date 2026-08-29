@@ -3,7 +3,11 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import { User, IUser } from '../models/User.js';
 
-export interface AuthRequest extends Request {
+export interface AuthRequest<
+  B = unknown,
+  P = Record<string, string>,
+  Q = Record<string, string>,
+> extends Request<P, unknown, B, Q> {
   user?: IUser;
 }
 
