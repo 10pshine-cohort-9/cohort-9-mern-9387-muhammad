@@ -50,11 +50,9 @@ const shutdown = (signal: string): void => {
   }
 };
 
-// To Register shutdown handlers before database startup
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 
-// To Start application
 try {
   await connectDB();
 

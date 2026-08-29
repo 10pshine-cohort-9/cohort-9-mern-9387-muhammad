@@ -18,8 +18,8 @@ export const App: React.FC = () => {
             element={
               <div className="container">
                 <div className="card" style={{ maxWidth: '400px', margin: '60px auto', textAlign: 'center' }}>
-                  <h2>Login Placeholder</h2>
-                  <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Will be completed in next feature branch</p>
+                  <h2>Login</h2>
+                  <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Please log in to your account</p>
                 </div>
               </div>
             }
@@ -29,7 +29,8 @@ export const App: React.FC = () => {
             element={
               <div className="container">
                 <div className="card" style={{ maxWidth: '400px', margin: '60px auto', textAlign: 'center' }}>
-                  <h2>Register Placeholder</h2>
+                  <h2>Register</h2>
+                  <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Create a new account</p>
                 </div>
               </div>
             }

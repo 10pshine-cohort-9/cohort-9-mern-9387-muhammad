@@ -10,7 +10,6 @@ import { protect } from '../middleware/authMiddleware.js';
 
 export const noteRouter = Router();
 
-// Protect all note routes with authentication middleware
 noteRouter.use(protect);
 
 noteRouter.route('/').get(getNotes).post(createNote);

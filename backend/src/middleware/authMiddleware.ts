@@ -31,7 +31,6 @@ export const protect = async (
         return;
       }
 
-      // Verify and validate token
       const decoded = jwt.verify(token, env.jwtSecret);
       if (typeof decoded === 'string' || typeof decoded.id !== 'string') {
         res
