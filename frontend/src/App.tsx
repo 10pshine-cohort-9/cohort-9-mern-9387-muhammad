@@ -7,7 +7,7 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
-export const App: React.FC = () => {
+const App: React.FC = () => {
   return (
     <AuthProvider>
       <Router>
