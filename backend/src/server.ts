@@ -8,7 +8,7 @@ import { env } from './config/env.js';
 let isShuttingDown = false;
 let server: Server | null = null;
 
-const shutdown = (signal: string) => {
+const shutdown = (signal: string): void => {
   if (isShuttingDown) return;
 
   isShuttingDown = true;
@@ -20,7 +20,7 @@ const shutdown = (signal: string) => {
     process.exit(1);
   }, 10000);
 
-  const closeDatabase = async () => {
+  const closeDatabase = async (): Promise<void> => {
     try {
       await mongoose.connection.close();
       console.log('MongoDB disconnected');
