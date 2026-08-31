@@ -40,4 +40,24 @@ describe('Notes Protected Routes Authorization', () => {
       message: 'Not authorized, no token provided',
     });
   });
+
+  it('should return 401 Unauthorized when requesting GET /api/notes/export without token', async () => {
+    const response = await request(app).get('/api/notes/export');
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      success: false,
+      message: 'Not authorized, no token provided',
+    });
+  });
+
+  it('should return 401 Unauthorized when requesting POST /api/notes/import without token', async () => {
+    const response = await request(app).post('/api/notes/import').send({ notes: [] });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      success: false,
+      message: 'Not authorized, no token provided',
+    });
+  });
 });
