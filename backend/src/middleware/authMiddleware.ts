@@ -3,17 +3,24 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import { User, IUser } from '../models/User.js';
 
+export type AuthMiddlewareErrorResponse = {
+  success: false;
+  message: string;
+};
+
 export interface AuthRequest<
   B = unknown,
   P = Record<string, string>,
   Q = Record<string, string>,
-> extends Request<P, unknown, B, Q> {
+  ResBody = unknown,
+  Locals extends Record<string, any> = Record<string, any>,
+> extends Request<P, ResBody, B, Q, Locals> {
   user?: IUser;
 }
 
 export const protect = async (
   req: AuthRequest,
-  res: Response,
+  res: Response<AuthMiddlewareErrorResponse>,
   next: NextFunction,
 ): Promise<void> => {
   let token: string | undefined;
@@ -26,26 +33,28 @@ export const protect = async (
       token = req.headers.authorization.split(' ')[1];
 
       if (!token) {
-        res
-          .status(401)
-          .json({
-            success: false,
-            message: 'Not authorized, no token provided',
-          });
+        res.status(401).json({
+          success: false,
+          message: 'Not authorized, no token provided',
+        });
         return;
       }
 
       const decoded = jwt.verify(token, env.jwtSecret);
       if (typeof decoded === 'string' || typeof decoded.id !== 'string') {
-        res
-          .status(401)
-          .json({ success: false, message: 'Not authorized, invalid token' });
+        res.status(401).json({
+          success: false,
+          message: 'Not authorized, invalid token',
+        });
         return;
       }
 
       const user = await User.findById(decoded.id).select('-password');
       if (!user) {
-        res.status(401).json({ success: false, message: 'User not found' });
+        res.status(401).json({
+          success: false,
+          message: 'User not found',
+        });
         return;
       }
 
@@ -54,14 +63,16 @@ export const protect = async (
       return;
     } catch (error) {
       console.error('Auth middleware error:', error);
-      res
-        .status(401)
-        .json({ success: false, message: 'Not authorized, token failed' });
+      res.status(401).json({
+        success: false,
+        message: 'Not authorized, token failed',
+      });
       return;
     }
   }
 
-  res
-    .status(401)
-    .json({ success: false, message: 'Not authorized, no token provided' });
+  res.status(401).json({
+    success: false,
+    message: 'Not authorized, no token provided',
+  });
 };

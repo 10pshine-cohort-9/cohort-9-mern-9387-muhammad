@@ -35,3 +35,17 @@ app.get('/health', (_req, res) => {
     environment: env.nodeEnv,
   });
 });
+
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found`,
+  });
+});
+
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  res.status(400).json({
+    success: false,
+    message: err.message || 'Bad Request',
+  });
+});

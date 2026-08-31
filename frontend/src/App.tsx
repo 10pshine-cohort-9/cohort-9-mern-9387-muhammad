@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Login } from './pages/Login';
 import { SignUp } from './pages/SignUp';
+import { Dashboard } from './pages/Dashboard';
+import { Profile } from './pages/Profile';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -21,11 +23,15 @@ const App: React.FC = () => {
             path="/dashboard"
             element={
               <PrivateRoute>
-                <div className="container">
-                  <div className="card" style={{ marginTop: '40px' }}>
-                    <h2>Notes Dashboard</h2>
-                  </div>
-                </div>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <PrivateRoute>
+                <Profile />
               </PrivateRoute>
             }
           />

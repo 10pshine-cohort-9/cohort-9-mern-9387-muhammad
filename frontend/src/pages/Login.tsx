@@ -18,7 +18,7 @@ export const Login: React.FC = () => {
         setLoading(true);
 
         try {
-            const data = await fetchAPI('/auth/login', {
+            const data = await fetchAPI<{ token: string; user: { id: string; name: string; email: string } }>('/auth/login', {
                 method: 'POST',
                 body: JSON.stringify({ email, password }),
             });
