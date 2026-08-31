@@ -1,6 +1,5 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
-// Note Interface
 export interface INote extends Document {
   title: string;
   content: string;
@@ -9,7 +8,6 @@ export interface INote extends Document {
   updatedAt: Date;
 }
 
-// Note schema
 const noteSchema = new Schema<INote>(
   {
     title: {

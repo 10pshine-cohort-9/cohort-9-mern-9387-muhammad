@@ -3,6 +3,16 @@ import mongoose from 'mongoose';
 import { Note } from '../models/Note.js';
 import { AuthRequest } from '../middleware/authMiddleware.js';
 
+interface CreateNoteBody {
+  title?: string;
+  content?: string;
+}
+
+interface UpdateNoteBody {
+  title?: string;
+  content?: string;
+}
+
 export const getNotes = async (
   req: AuthRequest,
   res: Response,
@@ -24,7 +34,7 @@ export const getNotes = async (
 };
 
 export const getNoteById = async (
-  req: AuthRequest,
+  req: AuthRequest<unknown, { id: string }>,
   res: Response,
 ): Promise<void> => {
   try {
@@ -62,7 +72,7 @@ export const getNoteById = async (
 };
 
 export const createNote = async (
-  req: AuthRequest,
+  req: AuthRequest<CreateNoteBody>,
   res: Response,
 ): Promise<void> => {
   try {
@@ -104,7 +114,7 @@ export const createNote = async (
 };
 
 export const updateNote = async (
-  req: AuthRequest,
+  req: AuthRequest<UpdateNoteBody, { id: string }>,
   res: Response,
 ): Promise<void> => {
   try {
@@ -113,7 +123,7 @@ export const updateNote = async (
       return;
     }
 
-    const { title, content } = req.body;
+    const { title, content } = req.body || {};
 
     if (
       (title !== undefined && typeof title !== 'string') ||
@@ -175,7 +185,7 @@ export const updateNote = async (
 };
 
 export const deleteNote = async (
-  req: AuthRequest,
+  req: AuthRequest<unknown, { id: string }>,
   res: Response,
 ): Promise<void> => {
   try {

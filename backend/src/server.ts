@@ -50,16 +50,19 @@ const shutdown = (signal: string): void => {
   }
 };
 
-// To Register shutdown handlers before database startup
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 
-// To Start application
 try {
   await connectDB();
 
   server = app.listen(env.port, () => {
     console.log(`Shine Notes API running at http://localhost:${env.port}`);
+  });
+
+  server.on('error', (error: Error) => {
+    console.error('Server error:', error);
+    shutdown('SERVER_ERROR');
   });
 } catch (error) {
   console.error('Server failed to start:', error);

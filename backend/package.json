@@ -10,7 +10,7 @@
     "lint": "eslint src",
     "format": "prettier --check src",
     "format:write": "prettier --write src",
-    "test": "echo \"Tests will be configured in the testing phase\""
+    "test": "echo \"No tests configured\" && exit 0"
   },
   "keywords": [],
   "author": "",

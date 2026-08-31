@@ -13,6 +13,7 @@ const jwtSecret = process.env.JWT_SECRET;
 if (
   !jwtSecret ||
   jwtSecret === 'replace_with_a_long_random_secret' ||
+  jwtSecret === 'jwt_secret' ||
   Buffer.byteLength(jwtSecret) < 32
 ) {
   throw new Error(
@@ -25,6 +26,13 @@ const mongodbUri =
 
 if (!mongodbUri) {
   throw new Error('MONGODB_URI is required in production');
+}
+
+const clientUrl =
+  process.env.CLIENT_URL ?? (nodeEnv === 'production' ? '' : 'http://localhost:5173');
+
+if (!clientUrl) {
+  throw new Error('CLIENT_URL is required in production');
 }
 
 const JWT_EXPIRES_IN_PATTERN = /^\d+[smhd]$/;
@@ -40,7 +48,7 @@ export const env = {
   nodeEnv,
   port,
   mongodbUri,
-  clientUrl: process.env.CLIENT_URL ?? 'http://localhost:5173',
+  clientUrl,
   jwtSecret,
   jwtExpiresIn,
 } as const;
