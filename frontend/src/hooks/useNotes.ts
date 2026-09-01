@@ -75,7 +75,7 @@ export function useNotes(activeTab: ActiveTab) {
         return () => {
             isMounted = false;
         };
-    }, []);
+    }, [logout]);
 
     useEffect(() => {
         if (!token) {

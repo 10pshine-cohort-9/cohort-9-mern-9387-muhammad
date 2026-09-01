@@ -25,7 +25,7 @@ describe('ColorDropdown Component', () => {
     const handleSelectColor = vi.fn();
     render(
       <ColorDropdown
-        selectedColor="#ffffff"
+        currentColor="#ffffff"
         onSelectColor={handleSelectColor}
       />,
     );
