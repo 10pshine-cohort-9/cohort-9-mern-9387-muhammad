@@ -30,7 +30,7 @@ describe('useNotes hook', () => {
     );
   });
 
-  it('fetches notes on mount', async () => {
+  it('fetches notes on mount and computes counts', async () => {
     const mockNotes = [
       {
         _id: 'n1',

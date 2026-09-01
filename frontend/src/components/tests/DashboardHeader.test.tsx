@@ -10,8 +10,9 @@ describe('DashboardHeader Component', () => {
     const handleExport = vi.fn();
     const handleImport = vi.fn();
     const handleOpenCreateModal = vi.fn();
+    const handleEmptyTrash = vi.fn();
 
-    render(
+    const { rerender, container } = render(
       <DashboardHeader
         searchTerm="study"
         setSearchTerm={handleSearchChange}
@@ -23,13 +24,15 @@ describe('DashboardHeader Component', () => {
         trashedCount={0}
         onExport={handleExport}
         onImport={handleImport}
-        onEmptyTrash={vi.fn()}
+        onEmptyTrash={handleEmptyTrash}
         onOpenCreateModal={handleOpenCreateModal}
       />,
     );
 
     const searchInput = screen.getByPlaceholderText(/search by title/i);
     expect(searchInput).toHaveValue('study');
+    fireEvent.change(searchInput, { target: { value: 'new search' } });
+    expect(handleSearchChange).toHaveBeenCalledWith('new search');
 
     const createBtn = screen.getByRole('button', { name: /create note/i });
     fireEvent.click(createBtn);
@@ -38,5 +41,31 @@ describe('DashboardHeader Component', () => {
     const exportBtn = screen.getByRole('button', { name: /export/i });
     fireEvent.click(exportBtn);
     expect(handleExport).toHaveBeenCalledTimes(1);
+
+    const fileInput = container.querySelector('input[type="file"]')!;
+    fireEvent.change(fileInput, { target: { files: [new File([''], 'notes.json')] } });
+    expect(handleImport).toHaveBeenCalledTimes(1);
+
+    // Re-render in trash tab to test Empty Trash button
+    rerender(
+      <DashboardHeader
+        searchTerm=""
+        setSearchTerm={handleSearchChange}
+        sortBy="newest"
+        setSortBy={handleSortChange}
+        isListView={false}
+        setIsListView={handleViewToggle}
+        activeTab="trash"
+        trashedCount={3}
+        onExport={handleExport}
+        onImport={handleImport}
+        onEmptyTrash={handleEmptyTrash}
+        onOpenCreateModal={handleOpenCreateModal}
+      />,
+    );
+
+    const emptyTrashBtn = screen.getByRole('button', { name: /empty trash \(3\)/i });
+    fireEvent.click(emptyTrashBtn);
+    expect(handleEmptyTrash).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,62 +1,164 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { Login } from '../Login';
 import { SignUp } from '../SignUp';
 import { Profile } from '../Profile';
 import { AuthProvider } from '../../context/AuthContext';
+import * as api from '../../services/api';
 
-describe('Auth & Profile Pages', () => {
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
+describe('Authentication & Profile Pages', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     localStorage.clear();
   });
 
-  it('renders Login page form fields', () => {
-    render(
-      <AuthProvider>
-        <BrowserRouter>
-          <Login />
-        </BrowserRouter>
-      </AuthProvider>,
-    );
+  describe('Login Page', () => {
+    it('handles input changes and form submit successfully', async () => {
+      vi.spyOn(api, 'fetchAPI').mockResolvedValue({
+        token: 'mock-token',
+        user: { id: 'u1', name: 'User 1', email: 'user@example.com' },
+      } as any);
 
-    expect(screen.getByRole('heading', { name: /log in/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+      render(
+        <AuthProvider>
+          <BrowserRouter>
+            <Login />
+          </BrowserRouter>
+        </AuthProvider>,
+      );
+
+      const emailInput = screen.getByLabelText(/email address/i);
+      const passwordInput = screen.getByLabelText(/^password/i);
+      const submitBtn = screen.getByRole('button', { name: /log in/i });
+
+      fireEvent.change(emailInput, { target: { value: 'user@example.com' } });
+      fireEvent.change(passwordInput, { target: { value: 'password123' } });
+      fireEvent.click(submitBtn);
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
+      });
+    });
+
+    it('shows error banner when login fails', async () => {
+      vi.spyOn(api, 'fetchAPI').mockRejectedValue(new Error('Invalid credentials'));
+
+      render(
+        <AuthProvider>
+          <BrowserRouter>
+            <Login />
+          </BrowserRouter>
+        </AuthProvider>,
+      );
+
+      fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: 'bad@example.com' } });
+      fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: 'wrongpass' } });
+      fireEvent.click(screen.getByRole('button', { name: /log in/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument();
+      });
+    });
   });
 
-  it('renders SignUp page form fields', () => {
-    render(
-      <AuthProvider>
-        <BrowserRouter>
-          <SignUp />
-        </BrowserRouter>
-      </AuthProvider>,
-    );
+  describe('SignUp Page', () => {
+    it('handles input changes and submits signup successfully', async () => {
+      vi.spyOn(api, 'fetchAPI').mockResolvedValue({
+        token: 'mock-token',
+        user: { id: 'u1', name: 'John Doe', email: 'john@example.com' },
+      } as any);
 
-    expect(screen.getByRole('heading', { name: /create account/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/full name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+      render(
+        <AuthProvider>
+          <BrowserRouter>
+            <SignUp />
+          </BrowserRouter>
+        </AuthProvider>,
+      );
+
+      fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } });
+      fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: 'john@example.com' } });
+      fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: 'password123' } });
+      fireEvent.click(screen.getByRole('button', { name: /sign up/i }));
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
+      });
+    });
+
+    it('shows error banner when signup fails', async () => {
+      vi.spyOn(api, 'fetchAPI').mockRejectedValue(new Error('User already exists'));
+
+      render(
+        <AuthProvider>
+          <BrowserRouter>
+            <SignUp />
+          </BrowserRouter>
+        </AuthProvider>,
+      );
+
+      fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } });
+      fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: 'john@example.com' } });
+      fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: 'password123' } });
+      fireEvent.click(screen.getByRole('button', { name: /sign up/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/user already exists/i)).toBeInTheDocument();
+      });
+    });
   });
 
-  it('renders Profile page container when authenticated', () => {
-    localStorage.setItem(
-      'user',
-      JSON.stringify({ id: '123', name: 'Muhammad Ikram', email: 'test@example.com' }),
-    );
-    localStorage.setItem('token', 'sample-valid-jwt');
+  describe('Profile Page', () => {
+    it('renders profile data and opens change password modal', async () => {
+      localStorage.setItem('token', 'valid-token');
+      localStorage.setItem(
+        'user',
+        JSON.stringify({ id: 'u1', name: 'John Doe', email: 'john@example.com' }),
+      );
 
-    render(
-      <AuthProvider>
-        <BrowserRouter>
-          <Profile />
-        </BrowserRouter>
-      </AuthProvider>,
-    );
+      vi.spyOn(api, 'fetchAPI').mockResolvedValue({
+        data: [
+          {
+            _id: '1',
+            title: 'Note 1',
+            content: 'Text',
+            isPinned: true,
+            isArchived: false,
+            isTrashed: false,
+            tags: ['work'],
+          },
+        ],
+      } as any);
 
-    expect(screen.getByText(/back to dashboard/i)).toBeInTheDocument();
-    expect(screen.getAllByText('Muhammad Ikram').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('test@example.com').length).toBeGreaterThan(0);
+      render(
+        <AuthProvider>
+          <BrowserRouter>
+            <Profile />
+          </BrowserRouter>
+        </AuthProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByText('John Doe').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('john@example.com').length).toBeGreaterThan(0);
+      });
+
+      const changePasswordBtn = screen.getByRole('button', { name: /change password/i });
+      fireEvent.click(changePasswordBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText('Change Security Password')).toBeInTheDocument();
+      });
+    });
   });
 });

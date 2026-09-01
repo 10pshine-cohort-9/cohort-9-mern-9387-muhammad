@@ -50,5 +50,42 @@ describe('NoteCard Component', () => {
     const editBtn = screen.getByTitle('Edit note');
     fireEvent.click(editBtn);
     expect(handleEdit).toHaveBeenCalledWith(sampleNote);
+
+    const archiveBtn = screen.getByTitle('Archive');
+    fireEvent.click(archiveBtn);
+    expect(handleToggleArchive).toHaveBeenCalledWith(sampleNote);
+
+    const trashBtn = screen.getByTitle('Move to trash');
+    fireEvent.click(trashBtn);
+    expect(handleMoveToTrash).toHaveBeenCalledWith(sampleNote);
+  });
+
+  it('handles restore and delete permanently actions when in trash tab', () => {
+    const handleRestore = vi.fn();
+    const handleDeletePerm = vi.fn();
+
+    render(
+      <NoteCard
+        note={{ ...sampleNote, isTrashed: true }}
+        activeTab="trash"
+        activeColorMenuId={null}
+        setActiveColorMenuId={vi.fn()}
+        onEdit={vi.fn()}
+        onTogglePin={vi.fn()}
+        onToggleArchive={vi.fn()}
+        onMoveToTrash={vi.fn()}
+        onRestoreFromTrash={handleRestore}
+        onDeletePermanently={handleDeletePerm}
+        onChangeColor={vi.fn()}
+      />,
+    );
+
+    const restoreBtn = screen.getByTitle('Restore note');
+    fireEvent.click(restoreBtn);
+    expect(handleRestore).toHaveBeenCalledWith(expect.objectContaining({ isTrashed: true }));
+
+    const deletePermBtn = screen.getByTitle('Delete permanently');
+    fireEvent.click(deletePermBtn);
+    expect(handleDeletePerm).toHaveBeenCalledWith(expect.objectContaining({ isTrashed: true }));
   });
 });

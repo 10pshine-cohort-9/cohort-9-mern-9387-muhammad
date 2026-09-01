@@ -35,9 +35,12 @@ describe('ViewNoteModal Component', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('renders modal with note details and triggers edit/close', () => {
+  it('renders modal with note details and triggers edit, pin, archive, trash, and close', () => {
     const handleClose = vi.fn();
     const handleEdit = vi.fn();
+    const handleTogglePin = vi.fn();
+    const handleToggleArchive = vi.fn();
+    const handleMoveToTrash = vi.fn();
 
     render(
       <ViewNoteModal
@@ -46,9 +49,9 @@ describe('ViewNoteModal Component', () => {
         activeColorMenuId={null}
         setActiveColorMenuId={vi.fn()}
         onEdit={handleEdit}
-        onTogglePin={vi.fn()}
-        onToggleArchive={vi.fn()}
-        onMoveToTrash={vi.fn()}
+        onTogglePin={handleTogglePin}
+        onToggleArchive={handleToggleArchive}
+        onMoveToTrash={handleMoveToTrash}
         onRestoreFromTrash={vi.fn()}
         onDeletePermanently={vi.fn()}
         onChangeColor={vi.fn()}
@@ -62,5 +65,21 @@ describe('ViewNoteModal Component', () => {
     const editBtn = screen.getByTitle('Edit note');
     fireEvent.click(editBtn);
     expect(handleEdit).toHaveBeenCalledWith(sampleNote);
+
+    const pinBtn = screen.getByTitle('Unpin note');
+    fireEvent.click(pinBtn);
+    expect(handleTogglePin).toHaveBeenCalledWith(sampleNote);
+
+    const archiveBtn = screen.getByTitle('Archive');
+    fireEvent.click(archiveBtn);
+    expect(handleToggleArchive).toHaveBeenCalledWith(sampleNote);
+
+    const trashBtn = screen.getByTitle('Move to trash');
+    fireEvent.click(trashBtn);
+    expect(handleMoveToTrash).toHaveBeenCalledWith(sampleNote);
+
+    const closeBtn = screen.getByTitle('Close focused view');
+    fireEvent.click(closeBtn);
+    expect(handleClose).toHaveBeenCalled();
   });
 });
