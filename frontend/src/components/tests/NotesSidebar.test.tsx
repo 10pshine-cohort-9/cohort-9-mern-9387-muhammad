@@ -74,9 +74,11 @@ describe('NotesSidebar Component', () => {
 
     // Scroll lock event handling
     const backdrop = document.querySelector('.mobile-drawer-backdrop');
+    expect(backdrop).toBeInTheDocument();
     if (backdrop) {
       const wheelEvent = new WheelEvent('wheel', { bubbles: true, cancelable: true });
       backdrop.dispatchEvent(wheelEvent);
+      expect(wheelEvent.defaultPrevented).toBe(true);
     }
   });
 });

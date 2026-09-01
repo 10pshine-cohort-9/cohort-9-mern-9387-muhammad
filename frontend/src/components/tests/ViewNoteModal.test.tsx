@@ -126,12 +126,11 @@ describe('ViewNoteModal Component', () => {
       />,
     );
 
-    const colorBtns = screen.getAllByRole('button').filter((b) => b.getAttribute('aria-label')?.includes('color'));
-    if (colorBtns.length > 0) {
-      fireEvent.click(colorBtns[0]);
-      expect(onChangeColor).toHaveBeenCalled();
-      expect(setActiveColorMenuId).toHaveBeenCalledWith(null);
-    }
+    const firstColorDot = screen.getByTitle('Default White');
+    expect(firstColorDot).toBeInTheDocument();
+    fireEvent.click(firstColorDot);
+    expect(onChangeColor).toHaveBeenCalledWith('note-456', '#ffffff');
+    expect(setActiveColorMenuId).toHaveBeenCalledWith(null);
   });
 
   it('calls onExportMarkdown and shows default date when createdAt is missing', () => {

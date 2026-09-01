@@ -37,8 +37,10 @@ describe('TagInput Component', () => {
 
     // Click remove icon on first chip
     const removeIcons = document.querySelectorAll('.modal-chip-remove');
-    if (removeIcons.length > 0) {
-      fireEvent.click(removeIcons[0]);
+    expect(removeIcons.length).toBeGreaterThan(0);
+    const firstRemoveIcon = removeIcons[0];
+    if (firstRemoveIcon) {
+      fireEvent.click(firstRemoveIcon);
       expect(onRemoveTag).toHaveBeenCalledWith('react');
     }
   });

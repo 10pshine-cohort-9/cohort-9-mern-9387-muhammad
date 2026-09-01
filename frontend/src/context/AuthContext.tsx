@@ -17,26 +17,42 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(() => {
-    return typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
-  });
-
-  const [user, setUser] = useState<User | null>(() => {
-    if (typeof localStorage === 'undefined') return null;
-    const savedToken = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    if (savedToken && savedUser) {
-      try {
-        return JSON.parse(savedUser);
-      } catch {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        return null;
+/**
+ * Safely parses and validates saved authentication session from localStorage.
+ */
+const getInitialAuth = (): { token: string | null; user: User | null } => {
+  if (typeof localStorage === 'undefined') return { token: null, user: null };
+  const savedToken = localStorage.getItem('token');
+  const savedUser = localStorage.getItem('user');
+  if (savedToken && savedUser) {
+    try {
+      const parsed = JSON.parse(savedUser) as unknown;
+      if (
+        parsed &&
+        typeof parsed === 'object' &&
+        'id' in parsed &&
+        'name' in parsed &&
+        'email' in parsed &&
+        typeof (parsed as User).name === 'string' &&
+        typeof (parsed as User).email === 'string'
+      ) {
+        return { token: savedToken, user: parsed as User };
       }
+    } catch {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
     }
-    return null;
-  });
+  }
+  return { token: null, user: null };
+};
+
+/**
+ * Authentication context provider managing user session and persistent state.
+ */
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [initial] = useState(getInitialAuth);
+  const [token, setToken] = useState<string | null>(initial.token);
+  const [user, setUser] = useState<User | null>(initial.user);
 
   const login = (newToken: string, userData: User) => {
     localStorage.setItem('token', newToken);
@@ -52,7 +68,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
-
   return (
     <AuthContext.Provider
       value={{
@@ -60,7 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         login,
         logout,
-        isAuthenticated: !!token,
+        isAuthenticated: !!token && !!user,
       }}
     >
       {children}

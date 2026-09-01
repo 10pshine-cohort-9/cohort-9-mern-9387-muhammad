@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { register, login, changePassword } from '../controllers/authController.js';
-import { User } from '../models/User.js';
+import { User, type IUser } from '../models/User.js';
 
 describe('Auth Controller Unit Tests', () => {
   let mockReq: Partial<Request>;

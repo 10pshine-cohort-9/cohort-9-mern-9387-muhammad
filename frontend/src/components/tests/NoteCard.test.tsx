@@ -117,11 +117,8 @@ describe('NoteCard', () => {
       />,
     );
 
-    // ColorDropdown should render color buttons
-    const colorButtons = screen.getAllByRole('button').filter(
-      (btn) => btn.getAttribute('aria-label')?.includes('color') || btn.title === 'Change color',
-    );
-    expect(colorButtons.length).toBeGreaterThanOrEqual(1);
+    const colorGroup = screen.getByRole('group', { name: /color options/i });
+    expect(colorGroup).toBeInTheDocument();
   });
 
   it('calls onExportMarkdown when export button is clicked', () => {
