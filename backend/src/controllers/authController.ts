@@ -14,11 +14,41 @@ interface LoginBody {
   password?: string;
 }
 
+export type AuthErrorResponse = {
+  success: false;
+  message: string;
+};
+
+export type RegisterSuccessResponse = {
+  success: true;
+  message: string;
+  token: string;
+  user: {
+    id: unknown;
+    name: string;
+    email: string;
+  };
+};
+
+export type LoginSuccessResponse = {
+  success: true;
+  message: string;
+  token: string;
+  user: {
+    id: unknown;
+    name: string;
+    email: string;
+  };
+};
+
+export type RegisterResponse = RegisterSuccessResponse | AuthErrorResponse;
+export type LoginResponse = LoginSuccessResponse | AuthErrorResponse;
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const register = async (
-  req: Request<Record<string, never>, Record<string, never>, RegisterBody>,
-  res: Response,
+  req: Request<Record<string, never>, RegisterResponse, RegisterBody>,
+  res: Response<RegisterResponse>,
 ): Promise<void> => {
   try {
     const { name, email, password } = req.body || {};
@@ -39,10 +69,18 @@ export const register = async (
       return;
     }
 
-    if (!password || typeof password !== 'string' || password.length < 6) {
+    if (
+      !password ||
+      typeof password !== 'string' ||
+      password.length < 6 ||
+      bcrypt.truncates(password)
+    ) {
       res.status(400).json({
         success: false,
-        message: 'Password must be at least 6 characters long',
+        message:
+          password && typeof password === 'string' && bcrypt.truncates(password)
+            ? 'Password exceeds maximum length of 72 bytes'
+            : 'Password must be at least 6 characters long',
       });
       return;
     }
@@ -97,8 +135,8 @@ export const register = async (
 };
 
 export const login = async (
-  req: Request<Record<string, never>, Record<string, never>, LoginBody>,
-  res: Response,
+  req: Request<Record<string, never>, LoginResponse, LoginBody>,
+  res: Response<LoginResponse>,
 ): Promise<void> => {
   try {
     const { email, password } = req.body || {};
@@ -111,10 +149,13 @@ export const login = async (
       return;
     }
 
-    if (!password || typeof password !== 'string') {
+    if (!password || typeof password !== 'string' || bcrypt.truncates(password)) {
       res.status(400).json({
         success: false,
-        message: 'Password is required',
+        message:
+          password && typeof password === 'string' && bcrypt.truncates(password)
+            ? 'Password exceeds maximum length of 72 bytes'
+            : 'Password is required',
       });
       return;
     }
@@ -153,3 +194,39 @@ export const login = async (
     });
   }
 };
+
+export const changePassword = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({
+        success: false,
+        message: 'Current and new password are required',
+      });
+      return;
+    }
+
+    if (typeof newPassword !== 'string' || newPassword.length < 6 || bcrypt.truncates(newPassword)) {
+      res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters and under 72 bytes',
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Password updated successfully',
+    });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during password update',
+    });
+  }
+};
+

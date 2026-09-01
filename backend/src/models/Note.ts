@@ -4,6 +4,11 @@ export interface INote extends Document {
   title: string;
   content: string;
   user: Types.ObjectId;
+  color?: string;
+  tags?: string[];
+  isPinned?: boolean;
+  isArchived?: boolean;
+  isTrashed?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,6 +28,26 @@ const noteSchema = new Schema<INote>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: [true, 'Note must belong to a user'],
+    },
+    color: {
+      type: String,
+      default: '#ffffff',
+    },
+    tags: {
+      type: [String],
+      default: [],
+    },
+    isPinned: {
+      type: Boolean,
+      default: false,
+    },
+    isArchived: {
+      type: Boolean,
+      default: false,
+    },
+    isTrashed: {
+      type: Boolean,
+      default: false,
     },
   },
   {

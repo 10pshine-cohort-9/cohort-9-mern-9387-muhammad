@@ -19,7 +19,7 @@ export const SignUp: React.FC = () => {
         setLoading(true);
 
         try {
-            const data = await fetchAPI('/auth/register', {
+            const data = await fetchAPI<{ token: string; user: { id: string; name: string; email: string } }>('/auth/register', {
                 method: 'POST',
                 body: JSON.stringify({ name, email, password }),
             });
