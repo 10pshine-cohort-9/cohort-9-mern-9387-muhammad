@@ -27,7 +27,7 @@ describe('Authentication & Profile Pages', () => {
       vi.spyOn(api, 'fetchAPI').mockResolvedValue({
         token: 'mock-token',
         user: { id: 'u1', name: 'User 1', email: 'user@example.com' },
-      } as any);
+      } as unknown as { token: string; user: { id: string; name: string; email: string } });
 
       render(
         <AuthProvider>
@@ -76,7 +76,7 @@ describe('Authentication & Profile Pages', () => {
       vi.spyOn(api, 'fetchAPI').mockResolvedValue({
         token: 'mock-token',
         user: { id: 'u1', name: 'John Doe', email: 'john@example.com' },
-      } as any);
+      } as unknown as { token: string; user: { id: string; name: string; email: string } });
 
       render(
         <AuthProvider>
@@ -138,7 +138,7 @@ describe('Authentication & Profile Pages', () => {
             tags: ['work'],
           },
         ],
-      } as any);
+      } as unknown as { data: unknown[] });
 
       render(
         <AuthProvider>
@@ -159,6 +159,45 @@ describe('Authentication & Profile Pages', () => {
       await waitFor(() => {
         expect(screen.getByText('Change Security Password')).toBeInTheDocument();
       });
+
+      const logoutBtn = screen.getByRole('button', { name: /logout account/i });
+      fireEvent.click(logoutBtn);
+      expect(mockNavigate).toHaveBeenCalledWith('/login');
+    });
+
+    it('returns null when user is not logged in', () => {
+      const { container } = render(
+        <AuthProvider>
+          <BrowserRouter>
+            <Profile />
+          </BrowserRouter>
+        </AuthProvider>,
+      );
+
+      expect(container.firstChild).toBeNull();
+    });
+
+    it('handles note stats fetch failure gracefully', async () => {
+      localStorage.setItem('token', 'valid-token');
+      localStorage.setItem(
+        'user',
+        JSON.stringify({ id: 'u1', name: 'John Doe', email: 'john@example.com' }),
+      );
+
+      vi.spyOn(api, 'fetchAPI').mockRejectedValue(new Error('Failed to load'));
+
+      render(
+        <AuthProvider>
+          <BrowserRouter>
+            <Profile />
+          </BrowserRouter>
+        </AuthProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByText('John Doe').length).toBeGreaterThan(0);
+      });
     });
   });
 });
+

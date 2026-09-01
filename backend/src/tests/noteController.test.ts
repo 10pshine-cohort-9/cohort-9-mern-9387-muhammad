@@ -8,11 +8,12 @@ import {
   updateNote,
   deleteNote,
 } from '../controllers/noteController.js';
-import { Note } from '../models/Note.js';
+import { Note, INote } from '../models/Note.js';
 import { AuthRequest } from '../middleware/authMiddleware.js';
+import { IUser } from '../models/User.js';
 
 describe('Note Controller', () => {
-  let mockReq: Partial<AuthRequest<any, any>>;
+  let mockReq: Partial<AuthRequest>;
   let mockRes: Partial<Response>;
   let jsonMock: ReturnType<typeof vi.fn>;
   let statusMock: ReturnType<typeof vi.fn>;
@@ -26,10 +27,10 @@ describe('Note Controller', () => {
     };
     mockReq = {
       user: {
-        _id: 'user-123' as any,
+        _id: 'user-123',
         name: 'Test User',
         email: 'test@example.com',
-      } as any,
+      } as unknown as IUser,
       params: {},
       body: {},
     };
@@ -48,7 +49,7 @@ describe('Note Controller', () => {
       const mockNotes = [{ _id: 'n1', title: 'Note 1' }];
       vi.spyOn(Note, 'find').mockReturnValue({
         sort: vi.fn().mockResolvedValue(mockNotes),
-      } as any);
+      } as unknown as ReturnType<typeof Note.find>);
 
       await getNotes(mockReq as AuthRequest, mockRes as Response);
 
@@ -58,6 +59,26 @@ describe('Note Controller', () => {
         count: 1,
         data: mockNotes,
       });
+    });
+
+    it('handles query find call with user id', async () => {
+      const findSpy = vi.spyOn(Note, 'find').mockReturnValue({
+        sort: vi.fn().mockResolvedValue([]),
+      } as unknown as ReturnType<typeof Note.find>);
+
+      await getNotes(mockReq as AuthRequest, mockRes as Response);
+
+      expect(findSpy).toHaveBeenCalledWith({ user: 'user-123' });
+    });
+
+    it('returns 500 on database failure in getNotes', async () => {
+      vi.spyOn(Note, 'find').mockReturnValue({
+        sort: vi.fn().mockRejectedValue(new Error('DB failure')),
+      } as unknown as ReturnType<typeof Note.find>);
+
+      await getNotes(mockReq as AuthRequest, mockRes as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(500);
     });
   });
 
@@ -86,7 +107,7 @@ describe('Note Controller', () => {
       mockReq.params = { id: '650000000000000000000001' };
       vi.spyOn(Note, 'findById').mockResolvedValue({
         user: 'other-user',
-      } as any);
+      } as unknown as INote);
 
       await getNoteById(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
 
@@ -96,7 +117,7 @@ describe('Note Controller', () => {
     it('returns 200 with note data if found and owned by user', async () => {
       mockReq.params = { id: '650000000000000000000001' };
       const sampleNote = { _id: '650000000000000000000001', user: 'user-123', title: 'Found' };
-      vi.spyOn(Note, 'findById').mockResolvedValue(sampleNote as any);
+      vi.spyOn(Note, 'findById').mockResolvedValue(sampleNote as unknown as INote);
 
       await getNoteById(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
 
@@ -135,13 +156,28 @@ describe('Note Controller', () => {
     it('creates note and returns 201 on valid input', async () => {
       mockReq.body = { title: 'New Note', content: 'Content' };
       const createdNote = { _id: 'new-id', title: 'New Note', content: 'Content', user: 'user-123' };
-      vi.spyOn(Note, 'create').mockResolvedValue(createdNote as any);
+      vi.spyOn(Note, 'create').mockResolvedValue(createdNote as unknown as INote[]);
 
       await createNote(mockReq as AuthRequest, mockRes as Response);
 
       expect(statusMock).toHaveBeenCalledWith(201);
       expect(jsonMock).toHaveBeenCalledWith(
-        expect.objectContaining({ success: true, data: createdNote }),
+        expect.objectContaining({
+          success: true,
+          data: createdNote,
+        }),
+      );
+    });
+
+    it('returns 500 on unexpected database error during create', async () => {
+      mockReq.body = { title: 'New Note', content: 'Content' };
+      vi.spyOn(Note, 'create').mockRejectedValue(new Error('DB failure'));
+
+      await createNote(mockReq as AuthRequest, mockRes as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Failed to create note' }),
       );
     });
   });
@@ -149,14 +185,24 @@ describe('Note Controller', () => {
   describe('updateNote', () => {
     it('returns 401 if user is missing', async () => {
       mockReq.user = undefined;
-      await updateNote(mockReq as AuthRequest<any, { id: string }>, mockRes as Response);
+      await updateNote(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
 
       expect(statusMock).toHaveBeenCalledWith(401);
     });
 
+    it('returns 400 if title or content is non-string type', async () => {
+      mockReq.body = { title: 123 as unknown as string };
+      await updateNote(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Title and content must be strings' }),
+      );
+    });
+
     it('returns 400 if both title and content are missing or invalid', async () => {
       mockReq.body = {};
-      await updateNote(mockReq as AuthRequest<any, { id: string }>, mockRes as Response);
+      await updateNote(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
 
       expect(statusMock).toHaveBeenCalledWith(400);
     });
@@ -166,7 +212,7 @@ describe('Note Controller', () => {
       mockReq.body = { title: 'Updated' };
       vi.spyOn(Note, 'findById').mockResolvedValue(null);
 
-      await updateNote(mockReq as AuthRequest<any, { id: string }>, mockRes as Response);
+      await updateNote(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
 
       expect(statusMock).toHaveBeenCalledWith(404);
     });
@@ -174,9 +220,9 @@ describe('Note Controller', () => {
     it('returns 403 if note belongs to another user', async () => {
       mockReq.params = { id: 'n1' };
       mockReq.body = { title: 'Updated' };
-      vi.spyOn(Note, 'findById').mockResolvedValue({ user: 'other-user' } as any);
+      vi.spyOn(Note, 'findById').mockResolvedValue({ user: 'other-user' } as unknown as INote);
 
-      await updateNote(mockReq as AuthRequest<any, { id: string }>, mockRes as Response);
+      await updateNote(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
 
       expect(statusMock).toHaveBeenCalledWith(403);
     });
@@ -196,13 +242,28 @@ describe('Note Controller', () => {
           content: 'Updated Content',
         }),
       };
-      vi.spyOn(Note, 'findById').mockResolvedValue(existing as any);
+      vi.spyOn(Note, 'findById').mockResolvedValue(existing as unknown as INote);
 
-      await updateNote(mockReq as AuthRequest<any, { id: string }>, mockRes as Response);
+      await updateNote(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({ success: true, message: 'Note updated successfully' }),
+      );
+    });
+
+    it('returns 400 on CastError during update', async () => {
+      mockReq.params = { id: 'invalid-id' };
+      mockReq.body = { title: 'Valid Title' };
+      vi.spyOn(Note, 'findById').mockRejectedValue(
+        new mongoose.Error.CastError('ObjectId', 'invalid-id', 'id'),
+      );
+
+      await updateNote(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Invalid note ID format' }),
       );
     });
 
@@ -211,7 +272,7 @@ describe('Note Controller', () => {
       mockReq.body = { title: 'Valid Title' };
       vi.spyOn(Note, 'findById').mockRejectedValue(new Error('DB failure'));
 
-      await updateNote(mockReq as AuthRequest<any, { id: string }>, mockRes as Response);
+      await updateNote(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
 
       expect(statusMock).toHaveBeenCalledWith(500);
     });
@@ -236,7 +297,7 @@ describe('Note Controller', () => {
 
     it('returns 403 if note belongs to another user', async () => {
       mockReq.params = { id: 'n1' };
-      vi.spyOn(Note, 'findById').mockResolvedValue({ user: 'other-user' } as any);
+      vi.spyOn(Note, 'findById').mockResolvedValue({ user: 'other-user' } as unknown as INote);
 
       await deleteNote(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
 
@@ -250,13 +311,27 @@ describe('Note Controller', () => {
         user: 'user-123',
         deleteOne: vi.fn().mockResolvedValue({}),
       };
-      vi.spyOn(Note, 'findById').mockResolvedValue(existing as any);
+      vi.spyOn(Note, 'findById').mockResolvedValue(existing as unknown as INote);
 
       await deleteNote(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({ success: true, message: 'Note deleted successfully' }),
+      );
+    });
+
+    it('returns 400 on CastError during delete', async () => {
+      mockReq.params = { id: 'invalid-id' };
+      vi.spyOn(Note, 'findById').mockRejectedValue(
+        new mongoose.Error.CastError('ObjectId', 'invalid-id', 'id'),
+      );
+
+      await deleteNote(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Invalid note ID format' }),
       );
     });
 
@@ -270,4 +345,3 @@ describe('Note Controller', () => {
     });
   });
 });
-

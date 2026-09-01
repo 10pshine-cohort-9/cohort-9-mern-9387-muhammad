@@ -26,7 +26,7 @@ describe('Auth Controller Unit Tests', () => {
   describe('register', () => {
     it('returns 400 if name is missing', async () => {
       mockReq.body = { email: 'test@example.com', password: 'password123' };
-      await register(mockReq as Request<any, any, any>, mockRes as Response);
+      await register(mockReq as unknown as Request, mockRes as unknown as Response);
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -36,7 +36,7 @@ describe('Auth Controller Unit Tests', () => {
 
     it('returns 400 if email is invalid', async () => {
       mockReq.body = { name: 'Test', email: 'invalid-email', password: 'password123' };
-      await register(mockReq as Request<any, any, any>, mockRes as Response);
+      await register(mockReq as unknown as Request, mockRes as unknown as Response);
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -46,7 +46,7 @@ describe('Auth Controller Unit Tests', () => {
 
     it('returns 400 if password is too short', async () => {
       mockReq.body = { name: 'Test', email: 'test@example.com', password: '123' };
-      await register(mockReq as Request<any, any, any>, mockRes as Response);
+      await register(mockReq as unknown as Request, mockRes as unknown as Response);
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -54,11 +54,21 @@ describe('Auth Controller Unit Tests', () => {
       );
     });
 
+    it('returns 400 if password exceeds maximum bcrypt length', async () => {
+      mockReq.body = { name: 'Test', email: 'test@example.com', password: 'a'.repeat(80) };
+      await register(mockReq as unknown as Request, mockRes as unknown as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Password exceeds maximum length of 72 bytes' }),
+      );
+    });
+
     it('returns 409 if user already exists', async () => {
       mockReq.body = { name: 'Test', email: 'test@example.com', password: 'password123' };
-      vi.spyOn(User, 'findOne').mockResolvedValue({ _id: 'u1' } as any);
+      vi.spyOn(User, 'findOne').mockResolvedValue({ _id: 'u1' } as unknown as IUser);
 
-      await register(mockReq as Request<any, any, any>, mockRes as Response);
+      await register(mockReq as unknown as Request, mockRes as unknown as Response);
 
       expect(statusMock).toHaveBeenCalledWith(409);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -73,9 +83,9 @@ describe('Auth Controller Unit Tests', () => {
         _id: 'new-id',
         name: 'New User',
         email: 'new@example.com',
-      } as any);
+      } as unknown as IUser[]);
 
-      await register(mockReq as Request<any, any, any>, mockRes as Response);
+      await register(mockReq as unknown as Request, mockRes as unknown as Response);
 
       expect(statusMock).toHaveBeenCalledWith(201);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -86,19 +96,45 @@ describe('Auth Controller Unit Tests', () => {
         }),
       );
     });
+
+    it('returns 409 if database throws duplicate key error code 11000', async () => {
+      mockReq.body = { name: 'Test', email: 'test@example.com', password: 'password123' };
+      vi.spyOn(User, 'findOne').mockResolvedValue(null);
+      const duplicateErr = Object.assign(new Error('E11000 duplicate key error'), { code: 11000 });
+      vi.spyOn(User, 'create').mockRejectedValue(duplicateErr);
+
+      await register(mockReq as unknown as Request, mockRes as unknown as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(409);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'User already exists' }),
+      );
+    });
+
+    it('returns 500 on unexpected database error during registration', async () => {
+      mockReq.body = { name: 'Test', email: 'test@example.com', password: 'password123' };
+      vi.spyOn(User, 'findOne').mockRejectedValue(new Error('DB failure'));
+
+      await register(mockReq as unknown as Request, mockRes as unknown as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Server error during registration' }),
+      );
+    });
   });
 
   describe('login', () => {
     it('returns 400 if email is invalid', async () => {
       mockReq.body = { email: 'bad-email', password: 'password123' };
-      await login(mockReq as Request<any, any, any>, mockRes as Response);
+      await login(mockReq as unknown as Request, mockRes as unknown as Response);
 
       expect(statusMock).toHaveBeenCalledWith(400);
     });
 
     it('returns 400 if password is missing', async () => {
       mockReq.body = { email: 'test@example.com' };
-      await login(mockReq as Request<any, any, any>, mockRes as Response);
+      await login(mockReq as unknown as Request, mockRes as unknown as Response);
 
       expect(statusMock).toHaveBeenCalledWith(400);
     });
@@ -107,9 +143,9 @@ describe('Auth Controller Unit Tests', () => {
       mockReq.body = { email: 'test@example.com', password: 'password123' };
       vi.spyOn(User, 'findOne').mockReturnValue({
         select: vi.fn().mockResolvedValue(null),
-      } as any);
+      } as unknown as ReturnType<typeof User.findOne>);
 
-      await login(mockReq as Request<any, any, any>, mockRes as Response);
+      await login(mockReq as unknown as Request, mockRes as unknown as Response);
 
       expect(statusMock).toHaveBeenCalledWith(401);
     });
@@ -123,10 +159,10 @@ describe('Auth Controller Unit Tests', () => {
           email: 'test@example.com',
           password: 'hashedpassword',
         }),
-      } as any);
+      } as unknown as ReturnType<typeof User.findOne>);
       vi.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
 
-      await login(mockReq as Request<any, any, any>, mockRes as Response);
+      await login(mockReq as unknown as Request, mockRes as unknown as Response);
 
       expect(statusMock).toHaveBeenCalledWith(401);
     });
@@ -140,10 +176,10 @@ describe('Auth Controller Unit Tests', () => {
           email: 'test@example.com',
           password: 'hashedpassword',
         }),
-      } as any);
+      } as unknown as ReturnType<typeof User.findOne>);
       vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
 
-      await login(mockReq as Request<any, any, any>, mockRes as Response);
+      await login(mockReq as unknown as Request, mockRes as unknown as Response);
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -151,6 +187,20 @@ describe('Auth Controller Unit Tests', () => {
           success: true,
           token: expect.any(String),
         }),
+      );
+    });
+
+    it('returns 500 on unexpected login database error', async () => {
+      mockReq.body = { email: 'test@example.com', password: 'password123' };
+      vi.spyOn(User, 'findOne').mockImplementation(() => {
+        throw new Error('Database disconnected');
+      });
+
+      await login(mockReq as unknown as Request, mockRes as unknown as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Server error during login' }),
       );
     });
   });
@@ -163,8 +213,13 @@ describe('Auth Controller Unit Tests', () => {
       expect(statusMock).toHaveBeenCalledWith(400);
     });
 
-    it('returns 400 if new password is too short', async () => {
+    it('returns 400 if new password is too short or exceeds max length', async () => {
       mockReq.body = { currentPassword: 'oldpassword', newPassword: '123' };
+      await changePassword(mockReq as Request, mockRes as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+
+      mockReq.body = { currentPassword: 'oldpassword', newPassword: 'a'.repeat(80) };
       await changePassword(mockReq as Request, mockRes as Response);
 
       expect(statusMock).toHaveBeenCalledWith(400);

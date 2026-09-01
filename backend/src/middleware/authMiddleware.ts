@@ -13,7 +13,7 @@ export interface AuthRequest<
   P = Record<string, string>,
   Q = Record<string, string>,
   ResBody = unknown,
-  Locals extends Record<string, any> = Record<string, any>,
+  Locals extends Record<string, unknown> = Record<string, unknown>,
 > extends Request<P, ResBody, B, Q, Locals> {
   user?: IUser;
 }

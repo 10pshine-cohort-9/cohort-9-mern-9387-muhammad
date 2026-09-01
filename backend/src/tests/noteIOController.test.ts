@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Response } from 'express';
 import { exportNotes, importNotes } from '../controllers/noteIOController.js';
-import { Note } from '../models/Note.js';
+import { Note, INote } from '../models/Note.js';
 import { AuthRequest } from '../middleware/authMiddleware.js';
+import { IUser } from '../models/User.js';
 
 vi.mock('../services/notePublisher.js', () => ({
   publishNotesImported: vi.fn(),
@@ -23,10 +24,10 @@ describe('Note IO Controller (Export & Import)', () => {
     };
     mockReq = {
       user: {
-        _id: 'user-123' as any,
+        _id: 'user-123',
         name: 'Test User',
         email: 'test@example.com',
-      } as any,
+      } as unknown as IUser,
       query: {},
       body: {},
     };
@@ -50,7 +51,7 @@ describe('Note IO Controller (Export & Import)', () => {
 
       vi.spyOn(Note, 'find').mockReturnValue({
         sort: vi.fn().mockResolvedValue(mockNotes),
-      } as any);
+      } as unknown as ReturnType<typeof Note.find>);
 
       await exportNotes(mockReq as AuthRequest, mockRes as Response);
 
@@ -66,22 +67,37 @@ describe('Note IO Controller (Export & Import)', () => {
       );
     });
 
-    it('filters by scope when query scope is provided', async () => {
-      mockReq.query = { scope: 'archived' };
+    it('filters by scope when query scope is notes or trash', async () => {
       const findSpy = vi.spyOn(Note, 'find').mockReturnValue({
         sort: vi.fn().mockResolvedValue([]),
-      } as any);
+      } as unknown as ReturnType<typeof Note.find>);
+
+      // Scope: notes
+      mockReq.query = { scope: 'notes' };
+      await exportNotes(mockReq as AuthRequest, mockRes as Response);
+      expect(findSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ user: 'user-123', isArchived: false, isTrashed: false }),
+      );
+
+      // Scope: trash
+      mockReq.query = { scope: 'trash' };
+      await exportNotes(mockReq as AuthRequest, mockRes as Response);
+      expect(findSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ user: 'user-123', isTrashed: true }),
+      );
+    });
+
+    it('returns 500 on database error during export', async () => {
+      vi.spyOn(Note, 'find').mockReturnValue({
+        sort: vi.fn().mockRejectedValue(new Error('DB failure')),
+      } as unknown as ReturnType<typeof Note.find>);
 
       await exportNotes(mockReq as AuthRequest, mockRes as Response);
 
-      expect(findSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          user: 'user-123',
-          isArchived: true,
-          isTrashed: false,
-        }),
+      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Failed to export notes' }),
       );
-      expect(statusMock).toHaveBeenCalledWith(200);
     });
   });
 
@@ -110,19 +126,20 @@ describe('Note IO Controller (Export & Import)', () => {
       );
     });
 
-    it('inserts valid notes and returns 201', async () => {
+    it('inserts valid notes with default fallback colors and tags and returns 201', async () => {
       mockReq.body = {
         notes: [
           {
             title: 'Imported Note 1',
             content: 'Imported Content 1',
-            tags: ['import'],
+            color: null,
+            tags: null,
           },
         ],
       };
 
       const inserted = [{ _id: 'new-id-1', title: 'Imported Note 1' }];
-      vi.spyOn(Note, 'insertMany').mockResolvedValue(inserted as any);
+      vi.spyOn(Note, 'insertMany').mockResolvedValue(inserted as unknown as INote[]);
 
       await importNotes(mockReq as AuthRequest, mockRes as Response);
 
@@ -132,6 +149,18 @@ describe('Note IO Controller (Export & Import)', () => {
           success: true,
           importedCount: 1,
         }),
+      );
+    });
+
+    it('returns 500 on unexpected database error during import', async () => {
+      mockReq.body = { notes: [{ title: 'Note', content: 'Body' }] };
+      vi.spyOn(Note, 'insertMany').mockRejectedValue(new Error('Insert error'));
+
+      await importNotes(mockReq as AuthRequest, mockRes as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Failed to import notes' }),
       );
     });
   });

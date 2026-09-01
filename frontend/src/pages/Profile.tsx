@@ -33,27 +33,36 @@ export const Profile: React.FC = () => {
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
     useEffect(() => {
+        let isMounted = true;
         const fetchStats = async () => {
             try {
                 const response = await fetchAPI<{ data: Note[] }>('/notes');
                 const allNotes = response.data || [];
 
-                setStats({
-                    total: allNotes.filter((n) => !n.isTrashed && !n.isArchived).length,
-                    pinned: allNotes.filter((n) => n.isPinned && !n.isTrashed && !n.isArchived).length,
-                    archived: allNotes.filter((n) => n.isArchived && !n.isTrashed).length,
-                    trash: allNotes.filter((n) => n.isTrashed).length,
-                });
+                if (isMounted) {
+                    setStats({
+                        total: allNotes.filter((n) => !n.isTrashed && !n.isArchived).length,
+                        pinned: allNotes.filter((n) => n.isPinned && !n.isTrashed && !n.isArchived).length,
+                        archived: allNotes.filter((n) => n.isArchived && !n.isTrashed).length,
+                        trash: allNotes.filter((n) => n.isTrashed).length,
+                    });
+                }
             } catch (err) {
                 console.error('Failed to load note statistics:', err);
             } finally {
-                setLoadingStats(false);
+                if (isMounted) {
+                    setLoadingStats(false);
+                }
             }
         };
 
         if (user) {
-            fetchStats();
+            void fetchStats();
         }
+
+        return () => {
+            isMounted = false;
+        };
     }, [user]);
 
     if (!user) {

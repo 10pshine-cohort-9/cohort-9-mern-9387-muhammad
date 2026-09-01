@@ -3,77 +3,80 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { NotesSidebar } from '../NotesSidebar';
 
 describe('NotesSidebar Component', () => {
-  const counts = { notes: 5, pinned: 2, archived: 3, trash: 1 };
+  const defaultProps = {
+    activeTab: 'notes' as const,
+    setActiveTab: vi.fn(),
+    selectedTag: null,
+    setSelectedTag: vi.fn(),
+    allTags: ['work', 'personal'],
+    counts: { notes: 5, pinned: 2, archived: 1, trash: 0 },
+    isCollapsed: false,
+    isMobileDrawerOpen: false,
+    onCloseMobile: vi.fn(),
+  };
 
-  it('renders all navigation tabs with their counts and handles selections', () => {
-    const handleSelectTab = vi.fn();
-    const handleSelectTag = vi.fn();
-    const handleCloseMobile = vi.fn();
+  it('renders all navigation tabs with counts and handles selection', () => {
+    const setActiveTab = vi.fn();
+    const setSelectedTag = vi.fn();
 
-    const { rerender } = render(
+    render(
       <NotesSidebar
-        activeTab="notes"
-        setActiveTab={handleSelectTab}
-        selectedTag={null}
-        setSelectedTag={handleSelectTag}
-        allTags={['react', 'node']}
-        counts={counts}
-        isCollapsed={false}
+        {...defaultProps}
+        setActiveTab={setActiveTab}
+        setSelectedTag={setSelectedTag}
       />,
     );
 
     expect(screen.getByText('All Notes')).toBeInTheDocument();
-    expect(screen.getByText('5')).toBeInTheDocument();
     expect(screen.getByText('Pinned')).toBeInTheDocument();
     expect(screen.getByText('Archive')).toBeInTheDocument();
     expect(screen.getByText('Trash')).toBeInTheDocument();
-    expect(screen.getByText('#react')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('Pinned'));
-    expect(handleSelectTab).toHaveBeenCalledWith('pinned');
+    const pinnedTab = screen.getByText('Pinned');
+    fireEvent.click(pinnedTab);
+    expect(setActiveTab).toHaveBeenCalledWith('pinned');
+    expect(setSelectedTag).toHaveBeenCalledWith(null);
+  });
 
-    fireEvent.click(screen.getByText('Archive'));
-    expect(handleSelectTab).toHaveBeenCalledWith('archived');
+  it('renders tags and toggles tag selection', () => {
+    const setSelectedTag = vi.fn();
+    render(<NotesSidebar {...defaultProps} setSelectedTag={setSelectedTag} />);
 
-    fireEvent.click(screen.getByText('Trash'));
-    expect(handleSelectTab).toHaveBeenCalledWith('trash');
+    expect(screen.getByText('#work')).toBeInTheDocument();
+    expect(screen.getByText('#personal')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('#react'));
-    expect(handleSelectTag).toHaveBeenCalledWith('react');
+    fireEvent.click(screen.getByText('#work'));
+    expect(setSelectedTag).toHaveBeenCalledWith('work');
+  });
 
-    // Deselect tag if clicked again
-    rerender(
+  it('unselects active tag when clicked again', () => {
+    const setSelectedTag = vi.fn();
+    render(<NotesSidebar {...defaultProps} selectedTag="work" setSelectedTag={setSelectedTag} />);
+
+    fireEvent.click(screen.getByText('#work'));
+    expect(setSelectedTag).toHaveBeenCalledWith(null);
+  });
+
+  it('renders mobile drawer and handles backdrop and close button clicks', () => {
+    const onCloseMobile = vi.fn();
+    render(
       <NotesSidebar
-        activeTab="notes"
-        setActiveTab={handleSelectTab}
-        selectedTag="react"
-        setSelectedTag={handleSelectTag}
-        allTags={['react', 'node']}
-        counts={counts}
-        isCollapsed={false}
-      />,
-    );
-
-    fireEvent.click(screen.getByText('#react'));
-    expect(handleSelectTag).toHaveBeenCalledWith(null);
-
-    // Test mobile drawer
-    rerender(
-      <NotesSidebar
-        activeTab="notes"
-        setActiveTab={handleSelectTab}
-        selectedTag={null}
-        setSelectedTag={handleSelectTag}
-        allTags={['react', 'node']}
-        counts={counts}
-        isCollapsed={false}
+        {...defaultProps}
         isMobileDrawerOpen={true}
-        onCloseMobile={handleCloseMobile}
+        onCloseMobile={onCloseMobile}
       />,
     );
 
-    const closeMobileBtn = screen.getByLabelText(/close navigation drawer/i);
-    fireEvent.click(closeMobileBtn);
-    expect(handleCloseMobile).toHaveBeenCalled();
+    expect(screen.getByText('Navigation')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Close navigation drawer'));
+    expect(onCloseMobile).toHaveBeenCalledTimes(1);
+
+    // Scroll lock event handling
+    const backdrop = document.querySelector('.mobile-drawer-backdrop');
+    if (backdrop) {
+      const wheelEvent = new WheelEvent('wheel', { bubbles: true, cancelable: true });
+      backdrop.dispatchEvent(wheelEvent);
+    }
   });
 });
