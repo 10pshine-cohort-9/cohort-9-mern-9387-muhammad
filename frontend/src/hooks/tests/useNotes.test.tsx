@@ -68,7 +68,7 @@ describe('useNotes hook', () => {
     expect(result.current.notes[0].title).toBe('Active Note');
   });
 
-  it('handles toggle pin and color change', async () => {
+  it('handles toggle pin, color, archive, trash, and delete actions', async () => {
     const mockNotes = [
       {
         _id: 'n1',
@@ -91,16 +91,65 @@ describe('useNotes hook', () => {
       expect(result.current.loading).toBe(false);
     });
 
+    // Pin toggle
     act(() => {
       result.current.handleTogglePin(mockNotes[0]);
     });
-
     expect(result.current.notes[0].isPinned).toBe(true);
 
+    // Color change
     act(() => {
       result.current.handleChangeColor('n1', '#fefce8');
     });
-
     expect(result.current.notes[0].color).toBe('#fefce8');
+
+    // Archive toggle
+    act(() => {
+      result.current.handleToggleArchive(mockNotes[0]);
+    });
+    expect(result.current.notes[0].isArchived).toBe(true);
+
+    // Trash move
+    act(() => {
+      result.current.handleMoveToTrash(mockNotes[0]);
+    });
+    expect(result.current.notes[0].isTrashed).toBe(true);
+
+    // Restore from trash
+    act(() => {
+      result.current.handleRestoreFromTrash(mockNotes[0]);
+    });
+    expect(result.current.notes[0].isTrashed).toBe(false);
+
+    // Save Note
+    await act(async () => {
+      await result.current.handleSaveNote({
+        title: 'Fresh Note',
+        content: 'Fresh Content',
+      });
+    });
+
+    // Permanent delete
+    act(() => {
+      result.current.handleDeletePermanently(mockNotes[0]);
+    });
+    expect(result.current.confirmConfig.isOpen).toBe(true);
+
+    // Confirm permanent delete
+    await act(async () => {
+      await result.current.confirmConfig.onConfirm();
+    });
+
+    // Request empty trash
+    act(() => {
+      result.current.requestEmptyTrash();
+    });
+    expect(result.current.confirmConfig.isOpen).toBe(true);
+
+    // Close confirm modal
+    act(() => {
+      result.current.closeConfirmModal();
+    });
+    expect(result.current.confirmConfig.isOpen).toBe(false);
   });
 });

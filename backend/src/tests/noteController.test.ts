@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Response } from 'express';
+import mongoose from 'mongoose';
 import {
   getNotes,
   getNoteById,
@@ -36,6 +37,13 @@ describe('Note Controller', () => {
   });
 
   describe('getNotes', () => {
+    it('returns 401 if user is not in request', async () => {
+      mockReq.user = undefined;
+      await getNotes(mockReq as AuthRequest, mockRes as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(401);
+    });
+
     it('returns all notes for user', async () => {
       const mockNotes = [{ _id: 'n1', title: 'Note 1' }];
       vi.spyOn(Note, 'find').mockReturnValue({
@@ -54,6 +62,13 @@ describe('Note Controller', () => {
   });
 
   describe('getNoteById', () => {
+    it('returns 401 if user is missing', async () => {
+      mockReq.user = undefined;
+      await getNoteById(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(401);
+    });
+
     it('returns 404 if note not found', async () => {
       mockReq.params = { id: '650000000000000000000001' };
       vi.spyOn(Note, 'findById').mockResolvedValue(null);
@@ -91,9 +106,25 @@ describe('Note Controller', () => {
         data: sampleNote,
       });
     });
+
+    it('returns 400 on CastError', async () => {
+      mockReq.params = { id: 'invalid-id' };
+      vi.spyOn(Note, 'findById').mockRejectedValue(new mongoose.Error.CastError('ObjectId', 'invalid-id', 'id'));
+
+      await getNoteById(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
   });
 
   describe('createNote', () => {
+    it('returns 401 if user is missing', async () => {
+      mockReq.user = undefined;
+      await createNote(mockReq as AuthRequest, mockRes as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(401);
+    });
+
     it('returns 400 if title or content is empty', async () => {
       mockReq.body = { title: '', content: '' };
       await createNote(mockReq as AuthRequest, mockRes as Response);
@@ -101,72 +132,122 @@ describe('Note Controller', () => {
       expect(statusMock).toHaveBeenCalledWith(400);
     });
 
-    it('creates and returns note with 201', async () => {
-      mockReq.body = { title: 'New Note', content: 'New Content' };
-      const created = { _id: 'n-new', title: 'New Note', content: 'New Content', user: 'user-123' };
-      vi.spyOn(Note, 'create').mockResolvedValue(created as any);
+    it('creates note and returns 201 on valid input', async () => {
+      mockReq.body = { title: 'New Note', content: 'Content' };
+      const createdNote = { _id: 'new-id', title: 'New Note', content: 'Content', user: 'user-123' };
+      vi.spyOn(Note, 'create').mockResolvedValue(createdNote as any);
 
       await createNote(mockReq as AuthRequest, mockRes as Response);
 
       expect(statusMock).toHaveBeenCalledWith(201);
       expect(jsonMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: true,
-          data: created,
-        }),
+        expect.objectContaining({ success: true, data: createdNote }),
       );
     });
   });
 
   describe('updateNote', () => {
-    it('returns 400 if no title and no content provided', async () => {
-      mockReq.params = { id: '650000000000000000000001' };
-      mockReq.body = {};
-
+    it('returns 401 if user is missing', async () => {
+      mockReq.user = undefined;
       await updateNote(mockReq as AuthRequest<any, { id: string }>, mockRes as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(401);
+    });
+
+    it('returns 400 if both title and content are missing or invalid', async () => {
+      mockReq.body = {};
+      await updateNote(mockReq as AuthRequest<any, { id: string }>, mockRes as Response);
+
       expect(statusMock).toHaveBeenCalledWith(400);
     });
 
-    it('updates note and returns 200', async () => {
-      mockReq.params = { id: '650000000000000000000001' };
-      mockReq.body = { title: 'Updated Title' };
+    it('returns 404 if note not found', async () => {
+      mockReq.params = { id: 'n1' };
+      mockReq.body = { title: 'Updated' };
+      vi.spyOn(Note, 'findById').mockResolvedValue(null);
 
-      const existingNote = {
-        _id: '650000000000000000000001',
+      await updateNote(mockReq as AuthRequest<any, { id: string }>, mockRes as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(404);
+    });
+
+    it('returns 403 if note belongs to another user', async () => {
+      mockReq.params = { id: 'n1' };
+      mockReq.body = { title: 'Updated' };
+      vi.spyOn(Note, 'findById').mockResolvedValue({ user: 'other-user' } as any);
+
+      await updateNote(mockReq as AuthRequest<any, { id: string }>, mockRes as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(403);
+    });
+
+    it('updates note and returns 200 on valid input', async () => {
+      mockReq.params = { id: 'n1' };
+      mockReq.body = { title: 'Updated Title', content: 'Updated Content' };
+      const existing = {
+        _id: 'n1',
         user: 'user-123',
         title: 'Old Title',
-        content: 'Content',
+        content: 'Old Content',
         save: vi.fn().mockResolvedValue({
-          _id: '650000000000000000000001',
+          _id: 'n1',
           user: 'user-123',
           title: 'Updated Title',
+          content: 'Updated Content',
         }),
       };
-
-      vi.spyOn(Note, 'findById').mockResolvedValue(existingNote as any);
+      vi.spyOn(Note, 'findById').mockResolvedValue(existing as any);
 
       await updateNote(mockReq as AuthRequest<any, { id: string }>, mockRes as Response);
 
       expect(statusMock).toHaveBeenCalledWith(200);
-      expect(existingNote.save).toHaveBeenCalled();
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true, message: 'Note updated successfully' }),
+      );
     });
   });
 
   describe('deleteNote', () => {
-    it('deletes note and returns 200', async () => {
-      mockReq.params = { id: '650000000000000000000001' };
-      const existingNote = {
-        _id: '650000000000000000000001',
-        user: 'user-123',
-        deleteOne: vi.fn().mockResolvedValue(true),
-      };
+    it('returns 401 if user is missing', async () => {
+      mockReq.user = undefined;
+      await deleteNote(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
 
-      vi.spyOn(Note, 'findById').mockResolvedValue(existingNote as any);
+      expect(statusMock).toHaveBeenCalledWith(401);
+    });
+
+    it('returns 404 if note not found', async () => {
+      mockReq.params = { id: 'n1' };
+      vi.spyOn(Note, 'findById').mockResolvedValue(null);
+
+      await deleteNote(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(404);
+    });
+
+    it('returns 403 if note belongs to another user', async () => {
+      mockReq.params = { id: 'n1' };
+      vi.spyOn(Note, 'findById').mockResolvedValue({ user: 'other-user' } as any);
+
+      await deleteNote(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(403);
+    });
+
+    it('deletes note and returns 200', async () => {
+      mockReq.params = { id: 'n1' };
+      const existing = {
+        _id: 'n1',
+        user: 'user-123',
+        deleteOne: vi.fn().mockResolvedValue({}),
+      };
+      vi.spyOn(Note, 'findById').mockResolvedValue(existing as any);
 
       await deleteNote(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
 
       expect(statusMock).toHaveBeenCalledWith(200);
-      expect(existingNote.deleteOne).toHaveBeenCalled();
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true, message: 'Note deleted successfully' }),
+      );
     });
   });
 });

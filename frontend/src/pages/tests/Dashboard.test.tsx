@@ -102,4 +102,63 @@ describe('Dashboard Page Component', () => {
 
     expect(screen.getByText('Create New Note')).toBeInTheDocument();
   });
+
+  it('handles note click to view details, tag filters, and confirm modals', () => {
+    const mockNotes = [
+      {
+        _id: 'n1',
+        title: 'Meeting Notes',
+        content: '<p>Discuss sprint goals</p>',
+        color: '#ffffff',
+        tags: ['planning'],
+        isPinned: false,
+        isArchived: false,
+        isTrashed: false,
+        createdAt: '2026-08-31T00:00:00.000Z',
+      },
+    ];
+
+    vi.spyOn(useNotesModule, 'useNotes').mockReturnValue({
+      notes: mockNotes,
+      loading: false,
+      error: '',
+      confirmConfig: {
+        isOpen: true,
+        title: 'Delete Note',
+        message: 'Are you sure?',
+        onConfirm: vi.fn(),
+      },
+      loadNotes: vi.fn(),
+      handleExportNotes: vi.fn(),
+      handleExportSingleMarkdown: vi.fn(),
+      handleImportNotes: vi.fn(),
+      handleSaveNote: vi.fn(),
+      handleTogglePin: vi.fn(),
+      handleToggleArchive: vi.fn(),
+      handleMoveToTrash: vi.fn(),
+      handleRestoreFromTrash: vi.fn(),
+      handleDeletePermanently: vi.fn(),
+      requestEmptyTrash: vi.fn(),
+      handleChangeColor: vi.fn(),
+      closeConfirmModal: vi.fn(),
+    });
+
+    render(
+      <AuthProvider>
+        <BrowserRouter>
+          <Dashboard />
+        </BrowserRouter>
+      </AuthProvider>,
+    );
+
+    // Confirm Modal is open
+    expect(screen.getByText('Delete Note')).toBeInTheDocument();
+    expect(screen.getByText('Are you sure?')).toBeInTheDocument();
+
+    // Click note card to open View Modal
+    const noteCard = screen.getByText('Meeting Notes');
+    fireEvent.click(noteCard);
+
+    expect(screen.getByText('Discuss sprint goals')).toBeInTheDocument();
+  });
 });
