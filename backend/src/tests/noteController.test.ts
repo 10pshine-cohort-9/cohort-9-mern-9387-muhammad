@@ -205,6 +205,16 @@ describe('Note Controller', () => {
         expect.objectContaining({ success: true, message: 'Note updated successfully' }),
       );
     });
+
+    it('returns 500 on unexpected failure', async () => {
+      mockReq.params = { id: 'n1' };
+      mockReq.body = { title: 'Valid Title' };
+      vi.spyOn(Note, 'findById').mockRejectedValue(new Error('DB failure'));
+
+      await updateNote(mockReq as AuthRequest<any, { id: string }>, mockRes as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+    });
   });
 
   describe('deleteNote', () => {
@@ -249,5 +259,15 @@ describe('Note Controller', () => {
         expect.objectContaining({ success: true, message: 'Note deleted successfully' }),
       );
     });
+
+    it('returns 500 on database error during delete', async () => {
+      mockReq.params = { id: 'n1' };
+      vi.spyOn(Note, 'findById').mockRejectedValue(new Error('DB failure'));
+
+      await deleteNote(mockReq as AuthRequest<unknown, { id: string }>, mockRes as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+    });
   });
 });
+

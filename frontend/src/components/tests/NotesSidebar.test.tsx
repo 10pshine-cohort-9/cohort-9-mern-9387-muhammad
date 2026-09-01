@@ -8,6 +8,7 @@ describe('NotesSidebar Component', () => {
   it('renders all navigation tabs with their counts and handles selections', () => {
     const handleSelectTab = vi.fn();
     const handleSelectTag = vi.fn();
+    const handleCloseMobile = vi.fn();
 
     const { rerender } = render(
       <NotesSidebar
@@ -55,5 +56,24 @@ describe('NotesSidebar Component', () => {
 
     fireEvent.click(screen.getByText('#react'));
     expect(handleSelectTag).toHaveBeenCalledWith(null);
+
+    // Test mobile drawer
+    rerender(
+      <NotesSidebar
+        activeTab="notes"
+        setActiveTab={handleSelectTab}
+        selectedTag={null}
+        setSelectedTag={handleSelectTag}
+        allTags={['react', 'node']}
+        counts={counts}
+        isCollapsed={false}
+        isMobileDrawerOpen={true}
+        onCloseMobile={handleCloseMobile}
+      />,
+    );
+
+    const closeMobileBtn = screen.getByLabelText(/close navigation drawer/i);
+    fireEvent.click(closeMobileBtn);
+    expect(handleCloseMobile).toHaveBeenCalled();
   });
 });

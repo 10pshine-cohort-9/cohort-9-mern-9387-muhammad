@@ -34,6 +34,21 @@ describe('DashboardHeader Component', () => {
     fireEvent.change(searchInput, { target: { value: 'new search' } });
     expect(handleSearchChange).toHaveBeenCalledWith('new search');
 
+    // Click clear search text button
+    const clearBtn = screen.getByTitle(/clear search text/i);
+    fireEvent.click(clearBtn);
+    expect(handleSearchChange).toHaveBeenCalledWith('');
+
+    // Change sort select
+    const select = container.querySelector('select')!;
+    fireEvent.change(select, { target: { value: 'oldest' } });
+    expect(handleSortChange).toHaveBeenCalledWith('oldest');
+
+    // Toggle list/grid view
+    const viewToggleBtn = screen.getByTitle(/switch to list view/i);
+    fireEvent.click(viewToggleBtn);
+    expect(handleViewToggle).toHaveBeenCalledWith(true);
+
     const createBtn = screen.getByRole('button', { name: /create note/i });
     fireEvent.click(createBtn);
     expect(handleOpenCreateModal).toHaveBeenCalledTimes(1);
@@ -41,6 +56,9 @@ describe('DashboardHeader Component', () => {
     const exportBtn = screen.getByRole('button', { name: /export/i });
     fireEvent.click(exportBtn);
     expect(handleExport).toHaveBeenCalledTimes(1);
+
+    const importBtn = screen.getByTitle(/import notes from/i);
+    fireEvent.click(importBtn);
 
     const fileInput = container.querySelector('input[type="file"]')!;
     fireEvent.change(fileInput, { target: { files: [new File([''], 'notes.json')] } });
@@ -53,7 +71,7 @@ describe('DashboardHeader Component', () => {
         setSearchTerm={handleSearchChange}
         sortBy="newest"
         setSortBy={handleSortChange}
-        isListView={false}
+        isListView={true}
         setIsListView={handleViewToggle}
         activeTab="trash"
         trashedCount={3}
